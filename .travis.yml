@@ -1,0 +1,15 @@
+sudo: required
+services:
+- docker
+
+env:
+  global:
+  - IMAGE_TAG=${TRAVIS_REPO_SLUG%/*}/reprepro:latest
+
+branches:
+  only: master
+
+script:
+- docker build -t ${IMAGE_TAG} .
+- docker images
+- docker history ${IMAGE_TAG}
