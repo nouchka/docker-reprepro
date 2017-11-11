@@ -1,29 +1,45 @@
-FROM debian:wheezy
-MAINTAINER Bruno Binet <bruno.binet@gmail.com>
+FROM debian
 
-RUN apt-get update && \
-  DEBIAN_FRONTEND=noninteractive apt-get install -yq --no-install-recommends \
-  gnupg reprepro openssh-server
-
-RUN mkdir /var/run/sshd
-RUN echo "REPREPRO_BASE_DIR=/data/debian" > /etc/environment
-
-# Configure an reprepro user (admin)
-RUN adduser --system --group --shell /bin/bash --uid 600 --disabled-password --no-create-home reprepro
-
-# Configure an apt user (read only)
-RUN adduser --system --group --shell /bin/bash --uid 601 --disabled-password --no-create-home apt
-
-ADD sshd_config /sshd_config
 ADD run.sh /run.sh
-RUN chmod +x /run.sh
+
+RUN apt-get update --quiet --quiet \
+	&& DEBIAN_FRONTEND=noninteractive apt-get install --yes --quiet --no-install-recommends \
+		gnupg \
+		openssh-server \
+	&& mkdir /var/run/sshd \
+	&& sed --in-place \
+		-e 's!^#\?AllowTcpForwarding\s.*$!AllowTcpForwarding no!' \
+		-e 's!^#\?AuthorizedKeysFile\s.*$!AuthorizedKeysFile /config/%u-authorized_keys!' \
+		-e 's!^#\?PasswordAuthentication\s.*$!PasswordAuthentication no!' \
+		-e 's!^#\?PermitRootLogin\s.*$!PermitRootLogin no!' \
+		-e 's!^\(Subsystem\s\+sftp.*\)$!#\1!' \
+		-e 's!^#\?UsePAM\s.*$!UsePAM no!' \
+		-e 's!^#\?X11Forwarding\s.*$!X11Forwarding no!' \
+		/etc/ssh/sshd_config \
+	&& (echo "AllowUsers reprepro apt" >> /etc/ssh/sshd_config) \
+	&& (echo "ForceCommand export REPREPRO_BASE_DIR=/data/debian; [ -n \"\$SSH_ORIGINAL_COMMAND\" ] && eval \"\$SSH_ORIGINAL_COMMAND\" || exec \"\$SHELL\"" >> /etc/ssh/sshd_config) \
+	&& (echo "PermitRootLogin no" >> /etc/ssh/sshd_config) \
+	&& (echo "Protocol 2" >> /etc/ssh/sshd_config) \
+	&& DEBIAN_FRONTEND=noninteractive apt-get install --yes --quiet --no-install-recommends \
+		reprepro \
+	&& adduser --system --group \
+		--shell /bin/bash \
+		--disabled-password \
+		--no-create-home \
+		reprepro \
+	&& adduser --system --group \
+		--shell /bin/bash \
+		--disabled-password \
+		--no-create-home \
+		apt \
+	&& (echo "REPREPRO_BASE_DIR=/data/debian" > /etc/environment) \
+	&& chmod +x /run.sh
 
 ENV REPREPRO_DEFAULT_NAME Reprepro
 
-VOLUME ["/config"]
-VOLUME ["/data"]
+VOLUME ["/config", "/data"]
 
 # sshd
 EXPOSE 22
 
-CMD ["/run.sh"]
+ENTRYPOINT ["/run.sh"]

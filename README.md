@@ -34,10 +34,10 @@ volume that should contain 4 files:
     Should be chown root:root and chmod 644.
   - `/config/reprepro_pub.gpg`: gpg public key to be used to sign debian
     packages.
-    Should be chown 600:root and chmod 600.
+    Should be chown <reprepro_uid>:root and chmod 600.
   - `/config/reprepro_sec.gpg`: gpg private key to be used to sign debian
     packages.
-    Should be chown 600:root and chmod 600.
+    Should be chown <reprepro_uid>:root and chmod 600.
 
 You also need to provide a read-write `/data` volume, which will be used to
 write the debian packages reprepro database, and the `.gnupg/` directory for
