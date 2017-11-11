@@ -13,3 +13,8 @@ script:
 - docker build -t ${IMAGE_TAG} .
 - docker images
 - docker history ${IMAGE_TAG}
+- run-parts --report --exit-on-error
+    --arg=${IMAGE_TAG}
+    --arg=${TRAVIS_BUILD_DIR%${TRAVIS_REPO_SLUG}}
+    --regex '.*\.sh$'
+    tests
