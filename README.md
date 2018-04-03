@@ -1,4 +1,4 @@
-docker-reprepro
+docker-reprepro [![Build Status](https://travis-ci.org/vicamo/docker_reprepro.svg?branch=master)](https://travis-ci.org/vicamo/docker_reprepro)
 ===============
 Reprepro (Debian packages repository) docker container.
 
