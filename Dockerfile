@@ -35,7 +35,8 @@ RUN apt-get update --quiet --quiet \
 	&& (echo "REPREPRO_BASE_DIR=/data/debian" > /etc/environment) \
 	&& chmod +x /run.sh
 
-ENV REPREPRO_DEFAULT_NAME Reprepro
+ENV REPREPRO_DEFAULT_NAME=Reprepro \
+	REPREPRO_BASE_DIR=/data/debian
 
 VOLUME ["/config", "/data"]
 
