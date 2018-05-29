@@ -6,9 +6,9 @@ ENV REPREPRO_DEFAULT_NAME=Reprepro \
 
 RUN apt-get update --quiet --quiet \
 	&& DEBIAN_FRONTEND=noninteractive apt-get install --yes --quiet --no-install-recommends \
-		gnupg \
-		reprepro \
-		lighttpd \
+		gnupg=2.* \
+		reprepro=5.* \
+		lighttpd=* \
 	&& adduser --system --group \
 		--shell /bin/bash \
 		--disabled-password \
