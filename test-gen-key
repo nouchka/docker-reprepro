@@ -1,0 +1,12 @@
+%echo Generating a basic OpenPGP key
+Key-Type: 1
+Key-Length: 2048
+Subkey-Type: 1
+Subkey-Length: 2048
+Name-Real: ggt
+Name-Comment: with stupid passphrase
+Name-Email: docker@katagena.com
+Expire-Date: 0
+# Do a commit here, so that we can later print \"done\" :-)
+%commit
+%echo done

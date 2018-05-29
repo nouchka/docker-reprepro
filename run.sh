@@ -1,15 +1,15 @@
 #!/bin/bash
 
 set -m
-
 export GNUPGHOME="/data/.gnupg"
+echo "REPREPRO_BASE_DIR=$REPREPRO_BASE_DIR" > /etc/environment
 
-if [ -f "/config/reprepro_sec.gpg" ]
+if [ -f "/config/secring.gpg" ]
 then
-    perms=$(stat -c %a /config/reprepro_sec.gpg)
+    perms=$(stat -c %a /config/secring.gpg)
     if [ "${perms: -1}" != "0" ]
     then
-        echo "/config/reprepro_sec.gpg gnupg private key should not be readable by others..."
+        echo "/config/secring.gpg gnupg private key should not be readable by others..."
         echo "=> Aborting!"
         exit 1
     fi
@@ -21,13 +21,13 @@ then
 else
     echo "=> /data/.gnupg directory does not exist:"
     echo "   Configuring gnupg for reprepro user..."
-    gpg --import /config/reprepro_pub.gpg
+    gpg --import /config/pubring.gpg
     if [ $? -ne 0 ]; then
         echo "=> Failed to import gnupg public key for reprepro..."
         echo "=> Aborting!"
         exit 1
     fi
-    gpg --allow-secret-key-import --import /config/reprepro_sec.gpg
+    gpg --allow-secret-key-import --import /config/secring.gpg
     if [ $? -ne 0 ]; then
         echo "=> Failed to import gnupg private key for reprepro..."
         echo "=> Aborting!"
@@ -36,27 +36,27 @@ else
     chown -R reprepro:reprepro ${GNUPGHOME}
 fi
 
-if [ -d "/data/debian" ]
+if [ -d "$REPREPRO_BASE_DIR" ]
 then
-    echo "=> /data/debian directory already exists:"
+    echo "=> $REPREPRO_BASE_DIR directory already exists:"
     echo "   So reprepro seems to be already configured, nothing to do..."
 else
-    echo "=> /data/debian directory does not exist:"
+    echo "=> $REPREPRO_BASE_DIR directory does not exist:"
     echo "   Configuring a default debian repository with reprepro..."
 
-    keyid=$(gpg --dry-run /config/reprepro_pub.gpg | grep "^pub " | sed "s/.*\/\([^ ]*\).*/\1/")
+    keyid=$(gpg --list-secret-keys --keyid-format SHORT | grep "^sec " | sed "s/.*\/\([^ ]*\).*/\1/")
     if [ -z "$keyid" ]
     then
-        echo "=> Please provide /config/reprepro_pub.gpg file to guess the key id to use for reprepro to sign pakages..."
+        echo "=> Please provide /config/pubring.gpg file to guess the key id to use for reprepro to sign pakages..."
         echo "=> Aborting!"
         exit 1
     fi
 
-    mkdir -p /data/debian/{tmp,incoming,conf}
+    mkdir -p $REPREPRO_BASE_DIR/{tmp,incoming,conf}
 
-    cat << EOF > /data/debian/conf/options
+    cat << EOF > $REPREPRO_BASE_DIR/conf/options
 verbose
-basedir /data/debian
+basedir $REPREPRO_BASE_DIR
 gnupghome ${GNUPGHOME}
 ask-passphrase
 EOF
@@ -70,7 +70,7 @@ EOF
             echo "=> No codename supplied for distribution ${dist}: falling back to ${dist} codename"
             dcodename=${dist}
         fi
-        cat << EOF >> /data/debian/conf/distributions
+        cat << EOF >> $REPREPRO_BASE_DIR/conf/distributions
 Origin: ${REPREPRO_DEFAULT_NAME}
 Label: ${REPREPRO_DEFAULT_NAME}
 Codename: ${dcodename}
@@ -82,24 +82,46 @@ DscOverride: override.${dist}
 SignWith: ${keyid}
 
 EOF
-        touch /data/debian/conf/override.${dist}
+        touch $REPREPRO_BASE_DIR/conf/override.${dist}
     done
 
     for incoming in $(echo ${RPP_INCOMINGS} | tr ";" "\n"); do
         iallow_var="RPP_ALLOW_${incoming}"
-        mkdir -p /data/debian/incoming/${incoming} /data/debian/tmp/${incoming}
-        cat << EOF >> /data/debian/conf/incoming
+        mkdir -p $REPREPRO_BASE_DIR/incoming/${incoming} $REPREPRO_BASE_DIR/tmp/${incoming}
+        cat << EOF >> $REPREPRO_BASE_DIR/conf/incoming
 Name: ${incoming}
-IncomingDir: /data/debian/incoming/${incoming}
-TempDir: /data/debian/tmp/${incoming}
+IncomingDir: $REPREPRO_BASE_DIR/incoming/${incoming}
+TempDir: $REPREPRO_INCOMING_DIR/${incoming}
 Allow: ${!iallow_var}
 Cleanup: on_deny on_error
 
 EOF
     done
-    chown -R reprepro:reprepro /data/debian
+    chown -R reprepro:reprepro $REPREPRO_BASE_DIR
 fi
 
-echo "=> Starting SSH server..."
-exec /usr/sbin/sshd -f /etc/ssh/sshd_config -D -e
+##Auto import
+for incoming in $(echo ${RPP_INCOMINGS} | tr ";" "\n"); do
+	iallow_var="RPP_ALLOW_${incoming}"
+	dist=$(echo ${!iallow_var}|awk -F '>' '{print $2}')
+	[ -d "$REPREPRO_INCOMING_DIR/$dist" ] || continue
+	find $REPREPRO_INCOMING_DIR/$dist -type f -name "*.deb"| while read i
+	do
+		reprepro --basedir=$REPREPRO_BASE_DIR includedeb $dist $i
+	done
+done
+
+## allow clean exit to build
+[ ! "$1" ] || exit 0
+
+##clean check
+cd $REPREPRO_BASE_DIR
+reprepro check
+reprepro clearvanished
+
+[ -f "/var/www/html/repo" ] || ln -s $REPREPRO_BASE_DIR /var/www/html/repo
+gpg --export > /var/www/html/repository.key
+
+echo "=> Starting lighttpd server..."
+exec /usr/sbin/lighttpd -D -f /etc/lighttpd/lighttpd.conf
 

@@ -1,0 +1,30 @@
+version: '3'
+
+services:
+  reprepro:
+    image: nouchka/reprepro
+    build: .
+    container_name: "reprepro"
+    ports:
+      - 88:80
+    volumes:
+      - reprepro_data:/data/
+      - ./test/config/:/config/:ro
+      - ./test/deb/:/incoming/:ro
+    environment:
+      - RPP_DISTRIBUTIONS=wdev;wprod;jdev;jprod
+      - RPP_CODENAME_wdev=wheezy-dev
+      - RPP_CODENAME_wprod=wheezy-prod
+      - RPP_CODENAME_jdev=jessie-dev
+      - RPP_CODENAME_jprod=jessie-prod
+      - RPP_ARCHITECTURES_wdev=amd64 armhf source
+      - RPP_ARCHITECTURES_wprod=amd64 armhf source
+      - RPP_ARCHITECTURES_jdev=amd64 armhf source
+      - RPP_ARCHITECTURES_jprod=amd64 armhf source
+      - RPP_INCOMINGS=in_wheezy;in_jessie
+      - RPP_ALLOW_in_wheezy=stable>wheezy-dev
+      - RPP_ALLOW_in_jessie=stable>jessie-dev
+
+volumes:
+  reprepro_data:
+    driver: local
