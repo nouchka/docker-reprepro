@@ -19,6 +19,6 @@ RUN apt-get update --quiet --quiet \
 COPY run.sh /run.sh
 RUN chmod +x /run.sh
 
-VOLUME ["/config", "/data", "/incoming"]
+VOLUME ["/config", "/data"]
 EXPOSE 80
 ENTRYPOINT ["/run.sh"]
