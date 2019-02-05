@@ -1,4 +1,6 @@
 FROM debian:stable-slim
+LABEL maintainer="Jean-Avit Promis docker@katagena.com"
+LABEL org.label-schema.vcs-url="https://github.com/nouchka/docker-reprepro"
 
 ENV REPREPRO_DEFAULT_NAME=Reprepro \
 	REPREPRO_BASE_DIR=/data/debian \
