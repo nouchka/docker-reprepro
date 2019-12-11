@@ -1,5 +1,6 @@
 DOCKER_IMAGE=reprepro
-DOCKER_NAMESPACE=nouchka
+
+include Makefile.docker
 
 GPG_HOME="test/config"
 TEST_DIST="jessie-dev"
@@ -7,12 +8,6 @@ TEST_COMMAND="hello"
 TEST_PACKAGE=$(TEST_COMMAND)
 
 .DEFAULT_GOAL := build
-
-build:
-	docker build -t $(DOCKER_NAMESPACE)/$(DOCKER_IMAGE) .
-
-check:
-	docker run --rm -i hadolint/hadolint < Dockerfile 2>/dev/null; true
 
 deb:
 	mkdir -p test/deb/$(TEST_DIST)/
@@ -40,4 +35,4 @@ down:
 	docker-compose down --volumes --remove-orphans
 	test ! -f /etc/apt/sources.list.d/test.list || sudo rm /etc/apt/sources.list.d/test.list
 
-test: build check run
+test: build hadolint run
